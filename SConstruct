@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+import os
+import sys
+
+env = SConscript("godot-cpp/SConstruct")
+
+# For reference:
+# - CCFLAGS are compilation flags shared between C and C++
+# - CFLAGS are for C-specific compilation flags
+# - CXXFLAGS are for C++-specific compilation flags
+# - CPPFLAGS are for pre-processor flags
+# - CPPDEFINES are for pre-processor defines
+# - LINKFLAGS are for linking flags
+
+# tweak this if you want to use different folders, or more folders, to store your source code in.
+env.Append(CPPPATH=["src/"])
+sources = Glob("src/*.cpp")
+sources += Glob("src/rhash/*.c")
+
+if env["target"] == "template_debug":
+    if env['platform'] == "windows":
+        env.Append(CCFLAGS=["/Zi", "/Od", "/DDEBUG_ENABLED", "/FS"])
+    else:
+        env.Append(CCFLAGS=["-g", "-O0", "-DDEBUG_ENABLED"])
+
+if env['platform'] == "windows":
+    env.Append(LINKFLAGS=["/NOIMPLIB", "/NOEXP"])
+
+platform_map = {
+    "windows.x86_32": "win32",
+    "windows.x86_64": "win64",
+    "macos.universal": "macos",
+    "linux.x86_32": "linux32",
+    "linux.x86_64": "linux64",
+}
+
+if env["platform"] == "macos":
+    library = env.SharedLibrary(
+        "addons/godot-rcheevos-rhash/{}/librcheevos-rhash.{}.framework/librcheevos-rhash.{}".format(
+            platform_map[f'{env["platform"]}.{env["arch"]}'], env["target"], env["target"]
+        ),
+        source=sources,
+    )
+else:
+    library = env.SharedLibrary(
+        "addons/godot-rcheevos-rhash/{}/librcheevos-rhash.{}.{}{}".format(platform_map[f'{env["platform"]}.{env["arch"]}'], env["target"], env["arch"], env["SHLIBSUFFIX"]),
+        source=sources,
+    )
+
+Default(library)
